@@ -3,8 +3,8 @@ from pygame.locals import *
 import random
 
 #画像のサイズからサイズ調整　3072＊1536
-WIDTH  = int(3072 / 3)
-HEIGHT = int(1536 / 3)
+WIDTH  = int(3072 / 2.5)
+HEIGHT = int(1536 / 2.5)
 
 #バックグラウンドクラス
 class Background:
@@ -28,7 +28,7 @@ class Paddle(pg.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.center = [x,y]   
        
-    def update(self):
+    def update(self,screen):
         #マウス操作で移動するように設定        
         dx = pg.mouse.get_pos()[0]
         self.rect.x = dx
@@ -37,7 +37,7 @@ class Paddle(pg.sprite.Sprite):
             self.rect.x = 0
         if self.rect.topright[0] >= WIDTH:
             self.rect.x = WIDTH - self.paddle_width
-        
+        pg.draw.rect(screen,(255,255,255),(self.rect.x,self.rect.y,self.paddle_width,self.paddle_height),2)
 #ボールクラス
 class Ball(pg.sprite.Sprite):
     def __init__(self, x, y):
@@ -101,19 +101,19 @@ class Block(pg.sprite.Sprite):
         self.rect.topleft = [x,y]
 
     #アップデート処理は特に今のところなし。ブロックを動かしたりしたければ処理を追加できます
-    def update(self):
-        pass
+    def update(self,screen):
+        pg.draw.rect(screen,(255,255,255),(self.rect.x,self.rect.y,self.block_width,self.block_height),2)
     
 
 #ブロック配置用マップ
 #空のリストを用意します
-map = []  
+blocks = []  
 #forで縦４、横15　のブロック並びに設定。好きな数に変更しても良いです。randomを使用すれば毎回違う並びになります。
 for col in range(4):
     data = []
-    for row in range(15):
+    for row in range(18):
         data.append(random.randint(0,3))
-    map.append(data)
+    blocks.append(data)
 # 上のfor文で以下のようなリストができます。リスト内の数字は毎回ランダムです。
 # map =[
 #     [3, 2, 1, 1, 2, 2, 1, 1, 3, 0, 2, 0, 2, 0, 1], 
@@ -140,22 +140,20 @@ class Game:
         self.bg = Background()
 
         #インスタンス化およびグループ化し、インスタンス化した物をグループに追加
-        self.paddle_group = pg.sprite.Group()
         self.paddle = Paddle(WIDTH / 2, HEIGHT - 80)
-        self.paddle_group.add(self.paddle)
+        self.paddle_group = pg.sprite.GroupSingle(self.paddle)
 
         #インスタンス化およびグループ化し、インスタンス化した物をグループに追加。
         #クラス内で出てきたkill()を行うとこのグループから外れます（画面の描画が消えます）
-        self.ball_group = pg.sprite.Group()
         self.ball = Ball(WIDTH /3, HEIGHT / 2)
-        self.ball_group.add(self.ball)
+        self.ball_group = pg.sprite.GroupSingle(self.ball)
 
         #インスタンス化およびグループ化し、インスタンス化した物をグループに追加。
         self.block_group = pg.sprite.Group()
         #Blockのinit関数で位置とインデックスを引数に渡していたので指定します。
         #２重のforループでmapリストから参照します。
         col_counter = 0
-        for col in map:
+        for col in blocks:
             row_counter = 0
             for row in col: 
                 #mapの値が0ならindexを0に指定します。すると表示されるブロックは青色になります。 1～3もそれぞれに対応させて設定              
@@ -199,42 +197,37 @@ class Game:
             self.paddle_group.draw(self.screen)
             
             #パドルの更新
-            self.paddle_group.update()            
+            self.paddle_group.update(self.screen)            
+            self.block_group.update(self.screen)            
 
             #ボールの初期位置の処理。ゲームが始まっていないなら、ボールは初期位置
-            if self.play == False:
+            if not self.play:
                 self.ball.init_position(self.paddle.rect.centerx,self.paddle.rect.centery - 50)
             
             #ゲーム開始後の処理
             if self.play: 
                 #ボールの更新
                 self.ball_group.update()
-
                 #ボールとブロックの衝突判定
                 # groupcollideをforでループさせると衝突一回毎の処理が行える
-                # 引数のtrue,falseで衝突時にkill（削除する）か設定できる                                  
-                collide = pg.sprite.groupcollide(self.ball_group,self.block_group,False,True)
-                for i in collide:
+                # 引数のtrue,falseで衝突時にkill（削除する）か設定できる
+                detect_range = 10                                  
+                collide_list = pg.sprite.groupcollide(self.ball_group,self.block_group,False,True)
+                for collide in collide_list:
                     #衝突したらボールを反射させて速度を追加する
                     self.ball.vel_y *= -1
                     if self.ball.speed <= self.ball.maxspeed:
                         self.ball.vel_y += self.ball.speed
-                
+                        
                 #ボールとプレイヤーの衝突判定    
                 paddle_collide = pg.sprite.collide_rect(self.ball,self.paddle)
+                
                 if paddle_collide:
                     #衝突したらボールを反射させて速度を追加する               
                     self.ball.vel_y *= -1
                     if self.ball.speed <= self.ball.maxspeed:
                         self.ball.vel_y += self.ball.speed
                     
-                    #細かい衝突位置の設定をしようとしたのですが、面倒になってやめました。
-                    # if abs(self.ball.rect.bottomright[0] - self.paddle.rect.topleft[0]) <= 10:
-                    #     self.ball.vel_y *= -1
-                    # if abs(self.ball.rect.x - self.paddle.rect.x) <= 5:
-                    #     self.ball.vel_x *= -1
-                           
-                       
             self.clock.tick(self.fps)
             pg.display.update()
         pg.quit()
