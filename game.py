@@ -28,7 +28,7 @@ class Paddle(pg.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.center = [x,y]   
        
-    def update(self,screen):
+    def update(self):
         #マウス操作で移動するように設定        
         dx = pg.mouse.get_pos()[0]
         self.rect.x = dx
@@ -37,7 +37,8 @@ class Paddle(pg.sprite.Sprite):
             self.rect.x = 0
         if self.rect.topright[0] >= WIDTH:
             self.rect.x = WIDTH - self.paddle_width
-        pg.draw.rect(screen,(255,255,255),(self.rect.x,self.rect.y,self.paddle_width,self.paddle_height),2)
+
+
 #ボールクラス
 class Ball(pg.sprite.Sprite):
     def __init__(self, x, y):
@@ -79,6 +80,7 @@ class Ball(pg.sprite.Sprite):
         #ボールが画面下端より下にいったら上で設定したmiss関数が実行される
         if self.rect.y > HEIGHT:
             self.miss()
+  
             
 #ブロッククラス
 class Block(pg.sprite.Sprite):
@@ -100,10 +102,6 @@ class Block(pg.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.topleft = [x,y]
 
-    #アップデート処理は特に今のところなし。ブロックを動かしたりしたければ処理を追加できます
-    def update(self,screen):
-        pg.draw.rect(screen,(255,255,255),(self.rect.x,self.rect.y,self.block_width,self.block_height),2)
-    
 
 #ブロック配置用マップ
 #空のリストを用意します
@@ -115,7 +113,7 @@ for col in range(4):
         data.append(random.randint(0,3))
     blocks.append(data)
 # 上のfor文で以下のようなリストができます。リスト内の数字は毎回ランダムです。
-# map =[
+# blocks =[
 #     [3, 2, 1, 1, 2, 2, 1, 1, 3, 0, 2, 0, 2, 0, 1], 
 #     [2, 0, 2, 0, 3, 1, 3, 1, 1, 0, 2, 2, 2, 0, 3], 
 #     [2, 3, 2, 3, 2, 0, 2, 2, 3, 2, 3, 0, 1, 2, 3], 
@@ -125,7 +123,6 @@ for col in range(4):
 #ゲームクラス
 class Game:
     def __init__(self):
-      
         pg.init()
         self.clock = pg.time.Clock()
         self.fps = 30
@@ -172,6 +169,7 @@ class Game:
                 row_counter += 1
             col_counter += 1       
 
+
     #メインループ処理
     def main(self):
         running = True
@@ -197,8 +195,7 @@ class Game:
             self.paddle_group.draw(self.screen)
             
             #パドルの更新
-            self.paddle_group.update(self.screen)            
-            self.block_group.update(self.screen)            
+            self.paddle_group.update()            
 
             #ボールの初期位置の処理。ゲームが始まっていないなら、ボールは初期位置
             if not self.play:
