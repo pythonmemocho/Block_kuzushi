@@ -28,7 +28,7 @@ class Paddle(pg.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.center = [x,y]   
        
-    def update(self):
+    def update(self,screen):
         #マウス操作で移動するように設定        
         dx = pg.mouse.get_pos()[0]
         self.rect.x = dx
@@ -37,7 +37,6 @@ class Paddle(pg.sprite.Sprite):
             self.rect.x = 0
         if self.rect.topright[0] >= WIDTH:
             self.rect.x = WIDTH - self.paddle_width
-
 
 #ボールクラス
 class Ball(pg.sprite.Sprite):
@@ -68,7 +67,7 @@ class Ball(pg.sprite.Sprite):
         self.kill()
 
     #毎フレームごとのボールの移動処理
-    def update(self):  
+    def update(self,screen):  
         #移動量、方向を追加      
         self.rect.x += self.vel_x
         self.rect.y -= self.vel_y
@@ -80,7 +79,6 @@ class Ball(pg.sprite.Sprite):
         #ボールが画面下端より下にいったら上で設定したmiss関数が実行される
         if self.rect.y > HEIGHT:
             self.miss()
-  
             
 #ブロッククラス
 class Block(pg.sprite.Sprite):
@@ -112,13 +110,6 @@ for col in range(4):
     for row in range(18):
         data.append(random.randint(0,3))
     blocks.append(data)
-# 上のfor文で以下のようなリストができます。リスト内の数字は毎回ランダムです。
-# blocks =[
-#     [3, 2, 1, 1, 2, 2, 1, 1, 3, 0, 2, 0, 2, 0, 1], 
-#     [2, 0, 2, 0, 3, 1, 3, 1, 1, 0, 2, 2, 2, 0, 3], 
-#     [2, 3, 2, 3, 2, 0, 2, 2, 3, 2, 3, 0, 1, 2, 3], 
-#     [1, 3, 0, 3, 3, 1, 1, 2, 0, 1, 2, 1, 3, 2, 1]
-#     ]
 
 #ゲームクラス
 class Game:
@@ -195,35 +186,44 @@ class Game:
             self.paddle_group.draw(self.screen)
             
             #パドルの更新
-            self.paddle_group.update()            
+            self.paddle_group.update(self.screen)            
 
             #ボールの初期位置の処理。ゲームが始まっていないなら、ボールは初期位置
             if not self.play:
                 self.ball.init_position(self.paddle.rect.centerx,self.paddle.rect.centery - 50)
-            
             #ゲーム開始後の処理
             if self.play: 
                 #ボールの更新
-                self.ball_group.update()
+                self.ball_group.update(self.screen)
                 #ボールとブロックの衝突判定
-                # groupcollideをforでループさせると衝突一回毎の処理が行える
                 # 引数のtrue,falseで衝突時にkill（削除する）か設定できる
-                detect_range = 10                                  
-                collide_list = pg.sprite.groupcollide(self.ball_group,self.block_group,False,True)
-                for collide in collide_list:
-                    #衝突したらボールを反射させて速度を追加する
-                    self.ball.vel_y *= -1
-                    if self.ball.speed <= self.ball.maxspeed:
-                        self.ball.vel_y += self.ball.speed
+                detect_range = 10
+                for block in self.block_group:                                  
+                    if pg.sprite.collide_rect(self.ball,block):
+                        if abs(block.rect.top - self.ball.rect.bottom) < detect_range and self.ball.vel_y > 0:
+                            self.ball.vel_y *= -1
+                            block.kill()
+                        if abs(block.rect.bottom - self.ball.rect.top) < detect_range and self.ball.vel_y > 0:
+                            self.ball.vel_y *= -1
+                            block.kill()
+                        if abs(block.rect.right - self.ball.rect.left) < detect_range and self.ball.vel_x < 0:
+                            self.ball.vel_x *= -1
+                            block.kill()
+                        if abs(block.rect.left - self.ball.rect.right) < detect_range and self.ball.vel_x > 0:
+                            self.ball.vel_x *= -1
+                            block.kill()
+                        
                         
                 #ボールとプレイヤーの衝突判定    
-                paddle_collide = pg.sprite.collide_rect(self.ball,self.paddle)
-                
-                if paddle_collide:
-                    #衝突したらボールを反射させて速度を追加する               
-                    self.ball.vel_y *= -1
-                    if self.ball.speed <= self.ball.maxspeed:
-                        self.ball.vel_y += self.ball.speed
+                if self.ball.rect.colliderect(self.paddle.rect):
+                    if abs(self.paddle.rect.top - self.ball.rect.bottom) < detect_range and self.ball.vel_y < 0:
+                        self.ball.vel_y *= -1
+                    if abs(self.paddle.rect.bottom - self.ball.rect.top) < detect_range and self.ball.vel_y > 0:
+                        self.ball.vel_y *= -1
+                    if abs(self.paddle.rect.right - self.ball.rect.left) < detect_range and self.ball.vel_x < 0:
+                        self.ball.vel_x *= -1
+                    if abs(self.paddle.rect.left - self.ball.rect.right) < detect_range and self.ball.vel_x < 0:
+                        self.ball.vel_x *= -1
                     
             self.clock.tick(self.fps)
             pg.display.update()
