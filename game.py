@@ -1,17 +1,17 @@
 import pygame as pg
+from pygame import mouse
 from pygame.locals import *
 import random
 
-#画像のサイズからサイズ調整　3072＊1536
-WIDTH  = int(3072 / 2.5)
-HEIGHT = int(1536 / 2.5)
+#ウィンドウサイズ設定
+WIDTH  = 1228 
+HEIGHT = 614   
 
 #バックグラウンドクラス
 class Background:
     def __init__(self):        
         self.image = pg.image.load("png/bg/full-bg.png")
         self.image = pg.transform.scale(self.image,(WIDTH,HEIGHT))
-             
     def update(self,screen):
         screen.blit(self.image,(0,0))
        
@@ -19,16 +19,14 @@ class Background:
 class Paddle(pg.sprite.Sprite):
     def __init__(self, x, y):
         pg.sprite.Sprite.__init__(self)
-        #画像のサイズよりサイズ調整
-        self.paddle_width = int(1518 / 12)
-        self.paddle_height = int(642 / 12)
+        self.paddle_width = 126
+        self.paddle_height = 54
         self.image = pg.image.load("png/bar/1.png")
-        self.image = pg.transform.scale(self.image,(self.paddle_width,self.paddle_height))
         #画像のサイズをrectで取得する、rext.center位置の設定
         self.rect = self.image.get_rect()
         self.rect.center = [x,y]   
        
-    def update(self,screen):
+    def update(self):
         #マウス操作で移動するように設定        
         dx = pg.mouse.get_pos()[0]
         self.rect.x = dx
@@ -37,16 +35,16 @@ class Paddle(pg.sprite.Sprite):
             self.rect.x = 0
         if self.rect.topright[0] >= WIDTH:
             self.rect.x = WIDTH - self.paddle_width
+        
 
 #ボールクラス
 class Ball(pg.sprite.Sprite):
     def __init__(self, x, y):
         pg.sprite.Sprite.__init__(self)
         #画像のサイズからサイズ調整
-        width = int(414 / 15)
-        height = int(408 / 15)
-        self.image = pg.image.load('png/bullet/bullet4.png')
-        self.image = pg.transform.scale(self.image,(width,height))
+        self.width = 24
+        self.height = 24
+        self.image = pg.image.load('png/ball/ball.png')
         #画像のサイズをrectで取得する、rext.center位置の設定
         self.rect = self.image.get_rect()
         self.rect.center = [x, y]
@@ -56,10 +54,11 @@ class Ball(pg.sprite.Sprite):
         self.speed = 1
         self.maxspeed = 15   
 
-    #ボールの初期位置を関数で設定しておく。初期値はプレイヤーの上。引数でプレイヤーのrectを指定し、その値をボールの初期値に返す
+    #ボールの初期位置を関数で設定しておく。初期値はプレイヤーの上。
+    # 引数でプレイヤーのrectを指定し、その値をボールの初期値に返す
     def init_position(self,paddlex,paddley):
-        self.rect.x = paddlex
-        self.rect.y = paddley
+        self.rect.x = paddlex - self.width + self.width
+        self.rect.y = paddley - self.height - self.height
         return self.rect.x, self.rect.y
     
     #ボールがプレイヤーより下にいった時の処理。killでグループから削除（後ほどグループの説明が出てきます）
@@ -67,7 +66,7 @@ class Ball(pg.sprite.Sprite):
         self.kill()
 
     #毎フレームごとのボールの移動処理
-    def update(self,screen):  
+    def update(self):  
         #移動量、方向を追加      
         self.rect.x += self.vel_x
         self.rect.y -= self.vel_y
@@ -76,7 +75,7 @@ class Ball(pg.sprite.Sprite):
             self.vel_x *= -1
         if self.rect.topleft[1] < 0 or self.rect.topright[1] < 0:
             self.vel_y *= -1
-        #ボールが画面下端より下にいったら上で設定したmiss関数が実行される
+        #ボールが画面下端より下にいったら上で設定したmissメソッドが実行される
         if self.rect.y > HEIGHT:
             self.miss()
             
@@ -85,14 +84,11 @@ class Block(pg.sprite.Sprite):
     def __init__(self,x,y,index):
         pg.sprite.Sprite.__init__(self)
         #画像のサイズからサイズ調整
-        self.block_width = int(522 / 10)
-        self.block_height = int(522 / 10)
-        #４枚の画像があるのでリストに格納していく。同時にサイズ調整も行う
-        self.images = []
-        for i in range(1,5):
-            img = pg.image.load(f"png/blocks/{i}.png")
-            img = pg.transform.scale(img,(self.block_width,self.block_height))
-            self.images.append(img)
+        self.block_width = 52
+        self.block_height = 52
+        
+        #4枚の画像があるのでリストに格納
+        self.images = [pg.image.load(f"png/blocks/{i}.png") for i in range(1,5)]
         
         #image変数し画像を１枚ずつ取り出せるようにしておく
         self.image = self.images[index]
@@ -101,15 +97,17 @@ class Block(pg.sprite.Sprite):
         self.rect.topleft = [x,y]
 
 
-#ブロック配置用マップ
-#空のリストを用意します
-blocks = []  
-#forで縦４、横15　のブロック並びに設定。好きな数に変更しても良いです。randomを使用すれば毎回違う並びになります。
-for col in range(4):
-    data = []
-    for row in range(18):
-        data.append(random.randint(0,3))
-    blocks.append(data)
+#ブロック配置リスト
+#forで縦4、横20　のブロック並びに設定。好きな数に変更しても良いです。randomを使用すれば毎回違う並びになります。
+blocks = [[random.randint(0,3) for _ in range(20)] for _ in range(4)] 
+#下の6行と上の1行は同じ内容です。記述方法が違うだけです。
+# blocks = []
+# for i in range(4):
+#     temp = []
+#     for j in range(20):
+#         temp.append(random.randint(0,3))
+#     blocks.append(temp)
+
 
 #ゲームクラス
 class Game:
@@ -117,8 +115,12 @@ class Game:
         pg.init()
         self.clock = pg.time.Clock()
         self.fps = 30
+        
+        self.block_size = 52
+        
         #プレイ状況を最初はfalseにしておく
         self.play = False
+        
         #画面surfaceの設定
         self.screen = pg.display.set_mode((WIDTH,HEIGHT))
         #ゲームのタイトル
@@ -128,7 +130,7 @@ class Game:
         self.bg = Background()
 
         #インスタンス化およびグループ化し、インスタンス化した物をグループに追加
-        self.paddle = Paddle(WIDTH / 2, HEIGHT - 80)
+        self.paddle = Paddle(WIDTH / 2, HEIGHT - 100)
         self.paddle_group = pg.sprite.GroupSingle(self.paddle)
 
         #インスタンス化およびグループ化し、インスタンス化した物をグループに追加。
@@ -146,16 +148,16 @@ class Game:
             for row in col: 
                 #mapの値が0ならindexを0に指定します。すると表示されるブロックは青色になります。 1～3もそれぞれに対応させて設定              
                 if row == 0:
-                    self.block = Block(120 + 52 * row_counter, 52 * col_counter, 0)
+                    self.block = Block(100 + self.block_size * row_counter, self.block_size * col_counter, 0)
                     self.block_group.add(self.block)
                 if row == 1:
-                    self.block = Block(120 + 52 * row_counter, 52 * col_counter, 1)
+                    self.block = Block(100 + self.block_size * row_counter, self.block_size * col_counter, 1)
                     self.block_group.add(self.block)
                 if row == 2:
-                    self.block = Block(120 + 52 * row_counter, 52 * col_counter, 2)
+                    self.block = Block(100 + self.block_size * row_counter, self.block_size * col_counter, 2)
                     self.block_group.add(self.block)
                 if row == 3:
-                    self.block = Block(120 + 52 * row_counter, 52 * col_counter, 3)
+                    self.block = Block(100 + self.block_size * row_counter, self.block_size * col_counter, 3)
                     self.block_group.add(self.block)
                 row_counter += 1
             col_counter += 1       
@@ -172,11 +174,13 @@ class Game:
                 if event.type == KEYDOWN:
                     if event.key == K_ESCAPE:
                         running = False
-                        
+                    
                 #マウスのボタンでスタートさせる処理
                 if event.type == MOUSEBUTTONDOWN:
                     self.play = True
-                   
+                    
+            #マウスカーソルを消去
+            pg.mouse.set_visible(False)
             #バックグラウンドの更新
             self.bg.update(self.screen)            
             
@@ -186,17 +190,16 @@ class Game:
             self.paddle_group.draw(self.screen)
             
             #パドルの更新
-            self.paddle_group.update(self.screen)            
-
+            self.paddle_group.update()            
             #ボールの初期位置の処理。ゲームが始まっていないなら、ボールは初期位置
             if not self.play:
-                self.ball.init_position(self.paddle.rect.centerx,self.paddle.rect.centery - 50)
+                self.ball.init_position(self.paddle.rect.centerx,self.paddle.rect.centery)
             #ゲーム開始後の処理
             if self.play: 
                 #ボールの更新
-                self.ball_group.update(self.screen)
+                self.ball_group.update()
+                
                 #ボールとブロックの衝突判定
-                # 引数のtrue,falseで衝突時にkill（削除する）か設定できる
                 detect_range = 10
                 for block in self.block_group:                                  
                     if pg.sprite.collide_rect(self.ball,block):
@@ -213,17 +216,16 @@ class Game:
                             self.ball.vel_x *= -1
                             block.kill()
                         
-                        
-                #ボールとプレイヤーの衝突判定    
-                if self.ball.rect.colliderect(self.paddle.rect):
+                #ボールとプレイヤーの衝突判定 
+                if pg.sprite.collide_rect(self.ball,self.paddle):
                     if abs(self.paddle.rect.top - self.ball.rect.bottom) < detect_range and self.ball.vel_y < 0:
-                        self.ball.vel_y *= -1
-                    if abs(self.paddle.rect.bottom - self.ball.rect.top) < detect_range and self.ball.vel_y > 0:
                         self.ball.vel_y *= -1
                     if abs(self.paddle.rect.right - self.ball.rect.left) < detect_range and self.ball.vel_x < 0:
                         self.ball.vel_x *= -1
-                    if abs(self.paddle.rect.left - self.ball.rect.right) < detect_range and self.ball.vel_x < 0:
+                        pg.draw.rect(self.screen,(255,255,255),(WIDTH//2,HEIGHT//2,150,150))
+                    if abs(self.paddle.rect.left - self.ball.rect.right) < detect_range and self.ball.vel_x > 0:
                         self.ball.vel_x *= -1
+                        pg.draw.rect(self.screen,(255,255,255),(WIDTH//2,HEIGHT//2,150,150))
                     
             self.clock.tick(self.fps)
             pg.display.update()
