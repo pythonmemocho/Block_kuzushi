@@ -1,5 +1,4 @@
 import pygame as pg
-from pygame import mouse
 from pygame.locals import *
 import random
 
@@ -22,6 +21,7 @@ class Paddle(pg.sprite.Sprite):
         self.paddle_width = 126
         self.paddle_height = 54
         self.image = pg.image.load("png/bar/1.png")
+        self.mask = pg.mask.from_surface(self.image)
         #画像のサイズをrectで取得する、rext.center位置の設定
         self.rect = self.image.get_rect()
         self.rect.center = [x,y]   
@@ -45,14 +45,13 @@ class Ball(pg.sprite.Sprite):
         self.width = 24
         self.height = 24
         self.image = pg.image.load('png/ball/ball.png')
+        self.mask = pg.mask.from_surface(self.image)
         #画像のサイズをrectで取得する、rext.center位置の設定
         self.rect = self.image.get_rect()
         self.rect.center = [x, y]
-        #ボールの速度を設定。最高速度も設定しておく
-        self.vel_x = 7
+        #ボールの速度を設定。
+        self.vel_x = 9
         self.vel_y = 9
-        self.speed = 1
-        self.maxspeed = 15
 
     #ボールの初期位置を関数で設定しておく。初期値はプレイヤーの上。
     # 引数でプレイヤーのrectを指定し、その値をボールの初期値に返す
@@ -64,6 +63,11 @@ class Ball(pg.sprite.Sprite):
     #ボールがプレイヤーより下にいった時の処理。killでグループから削除（後ほどグループの説明が出てきます）
     def miss(self):
         self.kill()
+
+    def draw_lives(self,screen):
+        self.image = pg.image.load('png/ball/ball.png')
+        self.image.set_colorkey((0,0,0))
+        screen.blit(self.image,(10,HEIGHT - 50))
 
     #毎フレームごとのボールの移動処理
     def update(self):  
@@ -89,8 +93,9 @@ class Block(pg.sprite.Sprite):
         #4枚の画像があるのでリストに格納
         self.images = [pg.image.load(f"png/blocks/{i}.png") for i in range(1,5)]
         
-        #image変数し画像を１枚ずつ取り出せるようにしておく
+        #image変数を設定し画像を１枚ずつ取り出せるようにしておく
         self.image = self.images[index]
+        self.mask = pg.mask.from_surface(self.image)
         #画像のサイズをrectで取得する、rext.topleft位置の設定
         self.rect = self.image.get_rect()
         self.rect.topleft = [x,y]
@@ -135,20 +140,20 @@ class Game:
         self.paddle_group = pg.sprite.GroupSingle(self.paddle)
 
         #インスタンス化およびグループ化し、インスタンス化した物をグループに追加。
-        #クラス内で出てきたkill()を行うとこのグループから外れます（画面の描画が消えます）
         self.ball = Ball(self.paddle.rect.centerx,self.paddle.rect.centery)
         self.ball_group = pg.sprite.GroupSingle(self.ball)
 
         #インスタンス化およびグループ化し、インスタンス化した物をグループに追加。
         self.block_group = pg.sprite.Group()
-        #Blockのinit関数で位置とインデックスを引数に渡していたので指定します。
-        #２重のforループでmapリストから参照します。
+
+        #2重のforループでblocksリストから参照します。
         col_counter = 0
         for col in blocks:
             row_counter = 0
             for row in col: 
-                #mapの値が0ならindexを0に指定します。すると表示されるブロックは青色になります。 1～3もそれぞれに対応させて設定              
+                #blocksの値が0ならindexを0に指定します。すると表示されるブロックは青色になります。 1～3もそれぞれに対応させて設定              
                 if row == 0:
+                    #Blockのinit関数で位置とインデックスを引数に渡していたので指定します。
                     self.block = Block(100 + self.block_size * row_counter, self.block_size * col_counter, 0)
                     self.block_group.add(self.block)
                 if row == 1:
@@ -189,7 +194,7 @@ class Game:
             self.block_group.draw(self.screen)
             self.ball_group.draw(self.screen)
             self.paddle_group.draw(self.screen)
-            
+            self.ball.draw_lives(self.screen)
             #パドルの更新
             self.paddle_group.update()            
             #ボールの初期位置の処理。ゲームが始まっていないなら、ボールは初期位置
@@ -205,20 +210,16 @@ class Game:
                 for block in self.block_group:                                  
                     if pg.sprite.collide_rect(self.ball,block):
                         if abs(block.rect.top - self.ball.rect.bottom) < detect_range and self.ball.vel_y < 0:
-                            self.ball.vel_y *= -1
-                            self.ball.speed += 0.5
+                            self.ball.vel_y *= -1 
                             block.kill()
                         if abs(block.rect.bottom - self.ball.rect.top) < detect_range and self.ball.vel_y > 0:
                             self.ball.vel_y *= -1
-                            self.ball.speed += 0.5
                             block.kill()
                         if abs(block.rect.right - self.ball.rect.left) < detect_range and self.ball.vel_x < 0:
                             self.ball.vel_x *= -1
-                            self.ball.speed += 0.5
                             block.kill()
                         if abs(block.rect.left - self.ball.rect.right) < detect_range and self.ball.vel_x > 0:
                             self.ball.vel_x *= -1
-                            self.ball.speed += 0.5
                             block.kill()
                         
                 #ボールとプレイヤーの衝突判定 
@@ -230,7 +231,7 @@ class Game:
                     if abs(self.paddle.rect.left - self.ball.rect.right) < detect_range and self.ball.vel_x > 0:
                         self.ball.vel_x *= -1
                 
-                #ボールが画面下端より下にいったら上で設定したmissメソッドが実行される
+                #ボールが画面下端より下にいったら上で設定したmiss関数が実行される
                 if self.ball.rect.y > HEIGHT:
                     self.ball.miss()
                     if self.life > 0:
