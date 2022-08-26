@@ -35,7 +35,6 @@ class Paddle(pg.sprite.Sprite):
             self.rect.x = 0
         if self.rect.topright[0] >= WIDTH:
             self.rect.x = WIDTH - self.paddle_width
-        
 
 #ボールクラス
 class Ball(pg.sprite.Sprite):
@@ -60,7 +59,7 @@ class Ball(pg.sprite.Sprite):
         self.rect.y = paddley - self.height - self.height
         return self.rect.x, self.rect.y
     
-    #ボールがプレイヤーより下にいった時の処理。killでグループから削除（後ほどグループの説明が出てきます）
+    #ボールがプレイヤーより下にいった時の処理。killでグループから削除
     def miss(self):
         self.kill()
 
@@ -74,14 +73,12 @@ class Ball(pg.sprite.Sprite):
         #移動量、方向を追加      
         self.rect.x += self.vel_x
         self.rect.y -= self.vel_y
-        #端に来た時の反射を設定（速度に-1をかけると速度が逆の値になるので）
+        #端に来た時の反射を設定
         if self.rect.centerx < 0 or self.rect.centerx > WIDTH:
             self.vel_x *= -1
         if self.rect.topleft[1] < 0 or self.rect.topright[1] < 0:
             self.vel_y *= -1
         
-            
-            
 #ブロッククラス
 class Block(pg.sprite.Sprite):
     def __init__(self,x,y,index):
@@ -100,18 +97,9 @@ class Block(pg.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.topleft = [x,y]
 
-
 #ブロック配置リスト
-#forで縦4、横20　のブロック並びに設定。好きな数に変更しても良いです。randomを使用すれば毎回違う並びになります。
+#forで縦4、横20　のブロック並びに設定。
 blocks = [[random.randint(0,3) for _ in range(20)] for _ in range(4)] 
-#下の6行と上の1行は同じ内容です。記述方法が違うだけです。
-# blocks = []
-# for i in range(4):
-#     temp = []
-#     for j in range(20):
-#         temp.append(random.randint(0,3))
-#     blocks.append(temp)
-
 
 #ゲームクラス
 class Game:
@@ -151,7 +139,6 @@ class Game:
         for col in blocks:
             row_counter = 0
             for row in col: 
-                #blocksの値が0ならindexを0に指定します。すると表示されるブロックは青色になります。 1～3もそれぞれに対応させて設定              
                 if row == 0:
                     #Blockのinit関数で位置とインデックスを引数に渡していたので指定します。
                     self.block = Block(100 + self.block_size * row_counter, self.block_size * col_counter, 0)
@@ -167,7 +154,6 @@ class Game:
                     self.block_group.add(self.block)
                 row_counter += 1
             col_counter += 1       
-
 
     #メインループ処理
     def main(self):
@@ -246,4 +232,6 @@ class Game:
 
 #ゲームクラスをインスタンス化してmain関数で実行
 game = Game()
-game.main()
+
+if __name__ == '__main__':
+    game.main()
